@@ -12,15 +12,18 @@ def main():
 
             data = data.split("\r\n") 
             # ['GET /index.html HTTP/1.1', 'Host: localhost:4221', 'User-Agent: curl/7.81.0', 'Accept: */*', '', '']
-            data = data[0].split(" ")
+            get = data[0].split(" ")
             # ['GET', '/index.html', 'HTTP/1.1']
+            path = get[1]
 
-            if data[1] == "/" :
-                response = "HTTP/1.1 200 OK\r\n\r\n".encode("utf-8")
+            if path == "/" :
+                response = "HTTP/1.1 200 OK\r\n\r\n"
+            elif path.startswith("/echo/"):
+                response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(path[6:])}\r\n\r\n{path[6:]}"
             else:
-                    response = "HTTP/1.1 404 Not Found\r\n\r\n".encode("utf-8")
-            conn.send(response)
-            
+                response = "HTTP/1.1 404 Not Found\r\n\r\n"
+            conn.send(response.encode("utf-8"))
+
             server_socket.close()
 
 if __name__ == "__main__":
