@@ -10,7 +10,7 @@ def main():
             with client :
                 print("Server connected to {}:{}".format(address[0], address[1])),
                 req = client .recv(1024).decode("utf-8")
-                client .send("HTTP/1.1 200 OK\r\n\r\n".encode("utg-8"))
+                client.send("HTTP/1.1 200 OK\r\n\r\n".encode("utg-8"))
         except:
             print("Server closed")
             server_socket.close()
