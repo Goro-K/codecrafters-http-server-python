@@ -1,41 +1,40 @@
 import socket
+import threading
 
-def handle_request(conn):
+def handle_request(conn, addr):
     """Traite une requête HTTP reçue via la connexion établie."""
-    data = conn.recv(4096).decode("utf-8")  # Taille ajustée pour une meilleure compatibilité
-    if not data:  # Si aucune donnée n'est reçue, retourne
-        return
+    try:
+        print(f"Connected to {addr}")
+        data = conn.recv(4096).decode("utf-8")  # Réception des données de la requête
+        if not data:  # Si aucune donnée n'est reçue, ne fait rien
+            return
 
-    # Extraction des informations de la requête
-    lines = data.split("\r\n")
-    request_line = lines[0].split(" ")
-    headers = {line.split(": ")[0]: line.split(": ")[1] for line in lines[1:] if ": " in line}
-    path = request_line[1]
-    agent = headers.get("User-Agent", "Unknown")
+        # Traitement simplifié de la requête HTTP
+        request_line, _, headers_part = data.partition('\r\n')
+        method, path, _ = request_line.split()
+        # Vous pouvez ajouter plus de logique ici pour traiter différents types de requêtes
 
-    # Construction de la réponse en fonction du chemin
-    if path == "/":
-        response = "HTTP/1.1 200 OK\r\n\r\n"
-    elif path.startswith("/echo/"):
-        content = path[6:]
-        response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(content)}\r\n\r\n{content}"
-    elif path.startswith("/user-agent"):
-        response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(agent)}\r\n\r\n{agent}"
-    else:
-        response = "HTTP/1.1 404 Not Found\r\n\r\n"
+        # Réponse simple basée sur le chemin
+        if path == "/":
+            response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<html><body><h1>Hello, World!</h1></body></html>"
+        else:
+            response = "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n<html><body><h1>404 Not Found</h1></body></html>"
 
-    conn.sendall(response.encode("utf-8"))
+        conn.sendall(response.encode("utf-8"))
+    finally:
+        conn.close()
 
 def main():
     server_socket = socket.create_server(("localhost", 4221))
     server_socket.listen(5)  # Commence à écouter les connexions entrantes
+    print("Server is listening on localhost:4221")
 
     try:
         while True:  # Boucle principale du serveur
             conn, addr = server_socket.accept()  # Accepte une connexion entrante
-            print(f"Connected to {addr}")
-            with conn:
-                handle_request(conn)
+            # Création d'un nouveau thread qui exécute la fonction handle_request pour chaque connexion
+            client_thread = threading.Thread(target=handle_request, args=(conn, addr))
+            client_thread.start()  # Démarre le thread
     except KeyboardInterrupt:
         print("Shutting down the server.")
     finally:

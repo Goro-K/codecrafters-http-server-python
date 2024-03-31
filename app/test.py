@@ -1,4 +1,5 @@
 import socket
+import threading
 
 def handle_request(conn):
     """Traite une requête HTTP reçue via la connexion établie."""
