@@ -11,6 +11,7 @@ def handle_request(conn):
     lines = data.split("\r\n")
     request_line = lines[0].split(" ")
     headers = {line.split(": ")[0]: line.split(": ")[1] for line in lines[1:] if ": " in line}
+    print(headers)
     path = request_line[1]
     agent = headers.get("User-Agent", "Unknown")
 

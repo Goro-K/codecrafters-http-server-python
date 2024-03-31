@@ -11,14 +11,21 @@ def handle_request(conn, addr):
 
         # Traitement simplifié de la requête HTTP
         request_line, _, headers_part = data.partition('\r\n')
-        method, path, _ = request_line.split()
-        # Vous pouvez ajouter plus de logique ici pour traiter différents types de requêtes
+        headers_lines = headers_part.split('\r\n')  # Divise les en-têtes en lignes
+        headers = {line.split(": ")[0]: line.split(": ")[1] for line in headers_lines if ": " in line}  # Crée un dictionnaire d'en-têtes
+        method, path, _ = request_line.split(' ', 2)  # Extractions de la méthode, du chemin et de la version HTTP
+        agent = headers.get("User-Agent", "Unknown")
 
         # Réponse simple basée sur le chemin
         if path == "/":
-            response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<html><body><h1>Hello, World!</h1></body></html>"
+            response = "HTTP/1.1 200 OK\r\n\r\n"
+        elif path.startswith("/echo/"):
+            content = path[6:]
+            response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(content)}\r\n\r\n{content}"
+        elif path.startswith("/user-agent"):
+            response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(agent)}\r\n\r\n{agent}"
         else:
-            response = "HTTP/1.1 404 Not Found\r\nContent-Type: text/html\r\n\r\n<html><body><h1>404 Not Found</h1></body></html>"
+            response = "HTTP/1.1 404 Not Found\r\n\r\n"
 
         conn.sendall(response.encode("utf-8"))
     finally:
