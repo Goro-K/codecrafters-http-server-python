@@ -13,13 +13,19 @@ def main():
             data = data.split("\r\n") 
             # ['GET /index.html HTTP/1.1', 'Host: localhost:4221', 'User-Agent: curl/7.81.0', 'Accept: */*', '', '']
             get = data[0].split(" ")
+
+            # ['User-Agent:', 'curl/7.81.0']
+            userAgent = data[2].split(" ")
+            agent = userAgent[1]
             # ['GET', '/index.html', 'HTTP/1.1']
             path = get[1]
 
             if path == "/" :
                 response = "HTTP/1.1 200 OK\r\n\r\n"
             elif path.startswith("/echo/"):
-                response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(path[6:])}\r\n\r\n{path[6:]}"
+                response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(path[6:])}\r\n\r\n{path[6:]}\n"
+            elif path.startswith("/user-agent"):
+                response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-length: {len(path)}\r\n\r\n{agent}"
             else:
                 response = "HTTP/1.1 404 Not Found\r\n\r\n"
             conn.send(response.encode("utf-8"))
