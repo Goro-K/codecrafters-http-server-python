@@ -1,7 +1,26 @@
-import socket
-import threading
+import socket, os
+from argparse import ArgumentParser
+from threading import Thread
 
-def handle_request(conn, addr):
+
+def main(directory):
+    server_socket = socket.create_server(("localhost", 4221))
+    server_socket.listen(5)  # Commence à écouter les connexions entrantes
+    print("Server is listening on localhost:4221")
+
+    try:
+        while True:  # Boucle principale du serveur
+            conn, addr = server_socket.accept()  # Accepte une connexion entrante
+            # Création d'un nouveau thread qui exécute la fonction handle_request pour chaque connexion
+            # Démarre le Thread 
+            Thread(target=handle_request, args=(conn, addr)).start()
+    except KeyboardInterrupt:
+        print("Shutting down the server.")
+    finally:
+        server_socket.close()
+
+
+def handle_request(conn, addr, directory):
     """Traite une requête HTTP reçue via la connexion établie."""
     try:
         print(f"Connected to {addr}")
@@ -24,6 +43,16 @@ def handle_request(conn, addr):
             response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(content)}\r\n\r\n{content}"
         elif path.startswith("/user-agent"):
             response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(agent)}\r\n\r\n{agent}"
+        elif path.startswith("/files/") and method == "GET":
+            filepath = os.path.join(directory, path[len("/files/"):])
+            print(f"Attempting to open: {filepath}")
+            
+            if os.path.exists(filepath) and os.path.isfile(filepath):
+                with open(filepath, "rb") as file:
+                    content = file.read()
+                response = f"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {len(content)}\r\n\r\n"
+            else:
+                response = "HTTP/1.1 404 Not Found\r\n\r\n"
         else:
             response = "HTTP/1.1 404 Not Found\r\n\r\n"
 
@@ -31,21 +60,13 @@ def handle_request(conn, addr):
     finally:
         conn.close()
 
-def main():
-    server_socket = socket.create_server(("localhost", 4221))
-    server_socket.listen(5)  # Commence à écouter les connexions entrantes
-    print("Server is listening on localhost:4221")
-
-    try:
-        while True:  # Boucle principale du serveur
-            conn, addr = server_socket.accept()  # Accepte une connexion entrante
-            # Création d'un nouveau thread qui exécute la fonction handle_request pour chaque connexion
-            client_thread = threading.Thread(target=handle_request, args=(conn, addr))
-            client_thread.start()  # Démarre le thread
-    except KeyboardInterrupt:
-        print("Shutting down the server.")
-    finally:
-        server_socket.close()
+def read_files(file):
+    with open(file, "r") as f:
+        return f.read()
+    
 
 if __name__ == "__main__":
-    main()
+    parser = ArgumentParser()
+    parser.add_argument("--directory", required=True, help="Directory to serve files from")
+    args = parser.parse_args()
+    main(args.directory)
