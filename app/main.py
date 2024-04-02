@@ -13,7 +13,7 @@ def main(directory):
             conn, addr = server_socket.accept()  # Accepte une connexion entrante
             # Création d'un nouveau thread qui exécute la fonction handle_request pour chaque connexion
             # Démarre le Thread 
-            Thread(target=handle_request, args=(conn, addr)).start()
+            Thread(target=handle_request, args=(conn, addr, directory)).start()
     except KeyboardInterrupt:
         print("Shutting down the server.")
     finally:
@@ -46,7 +46,7 @@ def handle_request(conn, addr, directory):
         elif path.startswith("/files/") and method == "GET":
             filepath = os.path.join(directory, path[len("/files/"):])
             print(f"Attempting to open: {filepath}")
-            
+
             if os.path.exists(filepath) and os.path.isfile(filepath):
                 with open(filepath, "rb") as file:
                     content = file.read()
@@ -56,15 +56,10 @@ def handle_request(conn, addr, directory):
         else:
             response = "HTTP/1.1 404 Not Found\r\n\r\n"
 
-        conn.sendall(response.encode("utf-8"))
+        conn.sendall(response.encode("utf-8"))  # Envoie la réponse au client
     finally:
         conn.close()
-
-def read_files(file):
-    with open(file, "r") as f:
-        return f.read()
-    
-
+        
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--directory", required=True, help="Directory to serve files from")
