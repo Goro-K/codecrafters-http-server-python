@@ -1,7 +1,7 @@
 import socket, os
-from argparse import ArgumentParser
+import argparse 
 from threading import Thread
-
+import pathlib
 
 def main(directory):
     server_socket = socket.create_server(("localhost", 4221))
@@ -13,14 +13,17 @@ def main(directory):
             conn, addr = server_socket.accept()  # Accepte une connexion entrante
             # Création d'un nouveau thread qui exécute la fonction handle_request pour chaque connexion
             # Démarre le Thread 
-            Thread(target=handle_request, args=(conn, addr, directory)).start()
+            Thread(target=handle_request, args=(conn, addr)).start()
     except KeyboardInterrupt:
         print("Shutting down the server.")
     finally:
         server_socket.close()
 
+def check_dir(dir, file_name):
+    filepath = os.path.join(dir, file_name)
+    return os.path.isfile(filepath)
 
-def handle_request(conn, addr, directory):
+def handle_request(conn, addr):
     """Traite une requête HTTP reçue via la connexion établie."""
     try:
         print(f"Connected to {addr}")
@@ -43,16 +46,20 @@ def handle_request(conn, addr, directory):
             response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(content)}\r\n\r\n{content}"
         elif path.startswith("/user-agent"):
             response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(agent)}\r\n\r\n{agent}"
-        elif path.startswith("/files/") and method == "GET":
-            filepath = os.path.join(directory, path[len("/files/"):])
-            print(f"Attempting to open: {filepath}")
-
-            if os.path.exists(filepath) and os.path.isfile(filepath):
-                with open(filepath, "rb") as file:
-                    content = file.read()
-                response = f"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {len(content)}\r\n\r\n"
+        elif path.startswith("/files"):
+            file_name = path.split("/")[2].decode()
+            print(file_name)
+            if not check_dir(dir=args.directory, file_name=file_name):
+                print("not found")
+                conn.sendall("HTTP/1.1 404 Not Found\r\n\r\n".encode())
+                conn.sendall(b"")
             else:
-                response = "HTTP/1.1 404 Not Found\r\n\r\n"
+                print("sending")
+                d = open(f"{args.directory}/{file_name}", "rb").read()
+                conn.sendall(
+                    f"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {len(d)}\r\n\r\n".encode()
+                )
+                conn.sendall(d)
         else:
             response = "HTTP/1.1 404 Not Found\r\n\r\n"
 
@@ -61,7 +68,7 @@ def handle_request(conn, addr, directory):
         conn.close()
         
 if __name__ == "__main__":
-    parser = ArgumentParser()
+    parser = argparse.ArgumentParser(description="Simple HTTP server")
     parser.add_argument("--directory", required=True, help="Directory to serve files from")
     args = parser.parse_args()
     main(args.directory)
