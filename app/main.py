@@ -13,6 +13,9 @@ args = parser.parse_args()
 def check_path(data):
     return data.split(b"\r\n")[0].split(b" ")[1]
 
+def check_method(data):
+    return data.split(b"\r\n")[0].split(b" ")[0]
+
 def get_user_agent(data):
     for d in data.split(b"\r\n"):
         if d.startswith(b"User-Agent:"):
@@ -29,6 +32,8 @@ def main(server_socket):
 
         data = connection.recv(1024)
         path = check_path(data)
+        method = check_method(data)
+        print(method)
         if path == b"/":
             connection.send("HTTP/1.1 200 OK\r\n\r\n".encode())
         elif path.startswith(b"/user-agent"):
@@ -50,6 +55,16 @@ def main(server_socket):
                     f"HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {len(d)}\r\n\r\n".encode()
                 )
                 connection.sendall(d)
+        elif method == b"POST" and path.startswith(b'/files'):
+            print("POST")
+            file_name = path.split(b"/")[2].decode()
+            print(file_name)
+            d = data.split(b"\r\n\r\n")[1]
+            print(d)
+            with open(f"{args.directory}/{file_name}", "wb") as f:
+                f.write(d)
+            connection.sendall("HTTP/1.1 200 OK\r\n\r\n".encode())
+            connection.sendall(b"")
 
         elif path.startswith(b"/echo"):
             d = path.split(b"/")[2:]
