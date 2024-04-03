@@ -26,6 +26,12 @@ def check_dir(dir, file_name):
 
     return os.path.isfile(filepath)
 
+def get_header_value(data, header):
+    for d in data.split(b"\r\n"):
+        if d.startswith(header):
+            return d.split(b": ")[1]
+    return None
+
 def main(server_socket):
     while True:
         connection, _ = server_socket.accept()  # accept new connection
@@ -58,13 +64,18 @@ def main(server_socket):
         elif method == b"POST" and path.startswith(b'/files'):
             print("POST")
             file_name = path.split(b"/")[2].decode()
-            print(file_name)
-            d = data.split(b"\r\n\r\n")[1]
-            print(d)
-            with open(f"{args.directory}/{file_name}", "wb") as f:
-                f.write(d)
-            connection.sendall("HTTP/1.1 200 OK\r\n\r\n".encode())
-            connection.sendall(b"")
+            file_path = args.directory / file_name
+            
+            content_length = int(get_header_value(data, b"Content-Length"))
+            body = connection.recv(content_length)
+
+            # Sauvegarder le contenu dans le fichier
+            with open(file_path, "wb") as file:
+                file.write(body)
+            
+            # Envoyer la réponse 201 Created
+            response = "HTTP/1.1 201 Created\r\n\r\n"
+            connection.sendall(response.encode())
 
         elif path.startswith(b"/echo"):
             d = path.split(b"/")[2:]
